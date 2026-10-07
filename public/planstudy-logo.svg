@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 120" width="620" height="120" role="img" aria-label="PlanStudy">
+  <g transform="translate(0 8) scale(1.32) translate(-4.5 -8.5)" fill="#4F46E5" stroke="#4F46E5" stroke-width="5" stroke-linejoin="round">
+    <path d="M7 27 L44 41 L44 84 L7 70 Z"/>
+    <path d="M51 41 L93 11 L93 54 L51 84 Z"/>
+  </g>
+  <text x="148" y="92" font-family="'DM Sans', system-ui, sans-serif" font-size="92" font-weight="700" letter-spacing="-2" fill="#0F172A">PlanStudy</text>
+</svg>

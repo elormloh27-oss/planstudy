@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="PlanStudy">
+  <rect width="512" height="512" rx="112" fill="#4F46E5"/>
+  <g transform="translate(256 256) scale(3.3) translate(-50 -47.5)" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="5" stroke-linejoin="round">
+    <path d="M7 27 L44 41 L44 84 L7 70 Z"/>
+    <path d="M51 41 L93 11 L93 54 L51 84 Z"/>
+  </g>
+</svg>
