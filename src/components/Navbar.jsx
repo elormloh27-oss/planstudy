@@ -25,8 +25,7 @@ export default function Navbar() {
     <nav className="border-b bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Link to="/" className="flex shrink-0 items-center">
-          <img src="/planstudy-logo.svg" alt="PlanStudy" className="hidden h-8 w-auto sm:block" />
-          <img src="/planstudy-mark.svg" alt="PlanStudy" className="h-7 w-7 sm:hidden" />
+          <img src="/planstudy-logo.svg" alt="PlanStudy" className="h-7 w-auto sm:h-8" />
         </Link>
         <div className="flex items-center gap-2 text-sm sm:gap-3">
           {email ? (
