@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import ProgressBar from '../components/ProgressBar.jsx'
+import Loading from '../components/Loading.jsx'
 
 export default function Dashboard() {
   const [plans, setPlans] = useState([])
@@ -25,7 +26,7 @@ export default function Dashboard() {
     setPlans((p) => p.filter((x) => x.id !== id))
   }
 
-  if (loading) return <p className="mx-auto max-w-6xl px-4 py-10">Loading...</p>
+  if (loading) return <Loading message="Loading your plans..." />
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -44,11 +45,15 @@ export default function Dashboard() {
         </div>
       ) : (
         <div className="mt-6 grid gap-4 md:grid-cols-2">
-          {plans.map((plan) => {
+          {plans.map((plan, i) => {
             const tasks = plan.plan_json || []
             const done = tasks.filter((t) => t.done).length
             return (
-              <div key={plan.id} className="rounded border bg-white p-5">
+              <div
+                key={plan.id}
+                className="anim-fade-up rounded border bg-white p-5"
+                style={{ animationDelay: `${Math.min(i, 6) * 0.06}s` }}
+              >
                 <p className="font-semibold">{plan.subject}</p>
                 <p className="text-sm text-slate-500">Due {plan.deadline}</p>
                 <div className="mt-3">

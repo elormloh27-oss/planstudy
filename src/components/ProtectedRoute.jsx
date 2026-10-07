@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
+import Loading from './Loading.jsx'
 
 export default function ProtectedRoute({ children }) {
   const [state, setState] = useState('checking')
@@ -16,7 +17,7 @@ export default function ProtectedRoute({ children }) {
   }, [])
 
   if (state === 'checking') {
-    return <p className="mx-auto max-w-6xl px-4 py-10 text-slate-500">Loading...</p>
+    return <Loading message="Checking your session..." />
   }
   if (state === 'out') return <Navigate to="/login" replace />
   return children

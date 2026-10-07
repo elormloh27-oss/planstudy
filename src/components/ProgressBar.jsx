@@ -9,7 +9,10 @@ export default function ProgressBar({ done, total }) {
         <span>{pct}%</span>
       </div>
       <div className="h-2 overflow-hidden rounded bg-slate-200">
-        <div className="h-full rounded bg-indigo-600" style={{ width: pct + '%' }} />
+        <div
+          className="h-full rounded bg-indigo-600 transition-all duration-500 ease-out"
+          style={{ width: pct + '%' }}
+        />
       </div>
     </div>
   )

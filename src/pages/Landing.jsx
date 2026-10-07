@@ -13,8 +13,8 @@ export default function Landing() {
 
   return (
     <main>
-      <section className="mx-auto max-w-6xl px-4 py-16 text-center">
-        <img src="/planstudy-logo.svg" alt="PlanStudy" className="mx-auto h-20 w-auto" />
+      <section className="anim-fade-up mx-auto max-w-6xl px-4 py-16 text-center">
+        <img src="/planstudy-logo.svg" alt="PlanStudy" className="anim-bounce-soft mx-auto h-20 w-auto" />
         <h1 className="mt-6 text-4xl font-bold tracking-tight">
           AI study plans for students.
         </h1>
