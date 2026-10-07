@@ -24,10 +24,11 @@ export default function Navbar() {
   return (
     <nav className="border-b bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link to="/" className="flex items-center">
-          <img src="/planstudy-logo.svg" alt="PlanStudy" className="h-8 w-auto" />
+        <Link to="/" className="flex shrink-0 items-center">
+          <img src="/planstudy-logo.svg" alt="PlanStudy" className="hidden h-8 w-auto sm:block" />
+          <img src="/planstudy-mark.svg" alt="PlanStudy" className="h-7 w-7 sm:hidden" />
         </Link>
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex items-center gap-2 text-sm sm:gap-3">
           {email ? (
             <>
               <Link to="/dashboard" className="text-slate-600 hover:text-slate-900">
@@ -35,7 +36,7 @@ export default function Navbar() {
               </Link>
               <Link
                 to="/new"
-                className="rounded bg-indigo-600 px-3 py-1.5 text-white hover:bg-indigo-700"
+                className="whitespace-nowrap rounded bg-indigo-600 px-3 py-1.5 text-white hover:bg-indigo-700"
               >
                 New plan
               </Link>
