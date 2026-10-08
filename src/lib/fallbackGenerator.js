@@ -43,3 +43,24 @@ export function generateFallbackPlan({ subject, topics, deadline, hoursPerDay })
   }
   return tasks
 }
+
+// Offline session splitter. Same shape as the AI breakdown, totals enforced by caller.
+export function generateFallbackBreakdown({ topicTitle, minutes }) {
+  const total = Math.max(5, Math.min(Math.round(Number(minutes) || 25), 300))
+  const name = String(topicTitle || 'Study').replace(/^Study\s+/i, '') || 'Study'
+  const recall = Math.max(5, Math.round(total / 5))
+  const learn = total - recall
+  const n = Math.max(1, Math.ceil(learn / 25))
+  const base = Math.floor(learn / n)
+  const out = []
+  for (let i = 0; i < n; i++) {
+    out.push({
+      id: `off-bd-${i}`,
+      title: `${name} — part ${i + 1}`,
+      minutes: base + (i < learn - base * n ? 1 : 0),
+      kind: 'learn'
+    })
+  }
+  out.push({ id: 'off-bd-r', title: `Recall everything from ${name}`, minutes: recall, kind: 'retrieve' })
+  return out
+}

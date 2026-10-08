@@ -4,11 +4,13 @@ import { supabase } from '../lib/supabaseClient.js'
 import ProgressBar from '../components/ProgressBar.jsx'
 import Loading from '../components/Loading.jsx'
 import SessionTimer from '../components/SessionTimer.jsx'
+import { generateBreakdown } from '../lib/generatePlan.js'
 
 export default function PlanDetail() {
   const { id } = useParams()
   const [plan, setPlan] = useState(null)
   const [activeTimer, setActiveTimer] = useState(null)
+  const [breaking, setBreaking] = useState(null)
 
   useEffect(() => {
     supabase
@@ -38,6 +40,22 @@ export default function PlanDetail() {
     const tasks = (plan.plan_json || []).map((t, i) =>
       i === index ? { ...t, blocks_done: blockNum + 1 } : t
     )
+    await saveTasks(tasks)
+  }
+
+  async function breakDown(index) {
+    const t = (plan.plan_json || [])[index]
+    if (!t) return
+    setBreaking(index)
+    const res = await generateBreakdown({
+      subject: plan.subject,
+      topicTitle: t.title,
+      minutes: t.duration_min
+    })
+    const tasks = (plan.plan_json || []).map((x, i) =>
+      i === index ? { ...x, breakdown: res.parts, breakdownSource: res.source } : x
+    )
+    setBreaking(null)
     await saveTasks(tasks)
   }
 
@@ -94,6 +112,42 @@ export default function PlanDetail() {
               >
                 {activeTimer === i ? 'Hide timer' : 'Start focus session'}
               </button>
+            )}
+            {!t.done && (
+              <button
+                onClick={() => breakDown(i)}
+                disabled={breaking === i}
+                className="btn-lively mt-1 w-full rounded-xl border border-slate-200 bg-white py-2 text-sm font-semibold text-slate-600 disabled:opacity-50"
+              >
+                {breaking === i ? 'Breaking it down...' : t.breakdown ? 'Re-break down' : 'Break it down'}
+              </button>
+            )}
+            {t.breakdown && (
+              <div className="anim-fade-up mt-2 rounded-xl bg-slate-50 p-3">
+                <p className="text-xs font-medium text-slate-500">
+                  Focus order · {t.breakdown.reduce((a, p) => a + p.minutes, 0)} min total
+                  {t.breakdownSource === 'offline' ? ' · offline' : ''}
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {t.breakdown.map((p) => (
+                    <li key={p.id} className="flex items-center gap-2 text-sm">
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                          p.kind === 'retrieve'
+                            ? 'bg-green-100 text-green-700'
+                            : p.kind === 'review'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-indigo-100 text-indigo-700'
+                        }`}
+                      >
+                        {p.kind}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">{p.title}</span>
+                      <span className="shrink-0 text-xs text-slate-500">{p.minutes}m</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
             {activeTimer === i && !t.done && (
               <div className="anim-fade-up mt-2">
