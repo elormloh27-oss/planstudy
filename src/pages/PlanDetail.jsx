@@ -3,10 +3,12 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import ProgressBar from '../components/ProgressBar.jsx'
 import Loading from '../components/Loading.jsx'
+import SessionTimer from '../components/SessionTimer.jsx'
 
 export default function PlanDetail() {
   const { id } = useParams()
   const [plan, setPlan] = useState(null)
+  const [activeTimer, setActiveTimer] = useState(null)
 
   useEffect(() => {
     supabase
@@ -17,12 +19,33 @@ export default function PlanDetail() {
       .then(({ data }) => setPlan(data))
   }, [id])
 
-  async function toggle(index) {
-    const tasks = (plan.plan_json || []).map((t, i) =>
-      i === index ? { ...t, done: !t.done } : t
-    )
+  async function saveTasks(tasks) {
     setPlan({ ...plan, plan_json: tasks })
     await supabase.from('study_plans').update({ plan_json: tasks }).eq('id', id)
+  }
+
+  async function toggle(index) {
+    const tasks = (plan.plan_json || []).map((t, i) => {
+      if (i !== index) return t
+      const next = { ...t, done: !t.done }
+      if (!next.done) delete next.blocks_done
+      return next
+    })
+    await saveTasks(tasks)
+  }
+
+  async function markBlock(index, blockNum) {
+    const tasks = (plan.plan_json || []).map((t, i) =>
+      i === index ? { ...t, blocks_done: blockNum + 1 } : t
+    )
+    await saveTasks(tasks)
+  }
+
+  async function finishFromTimer(index) {
+    const tasks = (plan.plan_json || []).map((t, i) =>
+      i === index ? { ...t, done: true } : t
+    )
+    await saveTasks(tasks)
   }
 
   if (!plan) return <Loading message="Opening your plan..." />
@@ -52,16 +75,41 @@ export default function PlanDetail() {
       </div>
       <ul className="mt-6 space-y-2">
         {tasks.map((t, i) => (
-          <li key={t.id || i} className="anim-fade-up flex items-center gap-3 rounded border bg-white px-4 py-3" style={{ animationDelay: `${Math.min(i, 8) * 0.04}s` }}>
-            <input
-              key={String(Boolean(t.done))}
-              type="checkbox"
-              checked={Boolean(t.done)}
-              onChange={() => toggle(i)}
-              className={`h-5 w-5 accent-indigo-600 ${t.done ? 'anim-pop' : ''}`}
-            />
-            <span className={t.done ? 'line-through text-slate-400' : ''}>{t.title}</span>
-            <span className="ml-auto text-xs text-slate-500">{t.date} · {t.duration_min}m</span>
+          <li key={t.id || i}>
+            <div className="anim-fade-up flex items-center gap-3 rounded border bg-white px-4 py-3" style={{ animationDelay: `${Math.min(i, 8) * 0.04}s` }}>
+              <input
+                key={String(Boolean(t.done))}
+                type="checkbox"
+                checked={Boolean(t.done)}
+                onChange={() => toggle(i)}
+                className={`h-5 w-5 accent-indigo-600 ${t.done ? 'anim-pop' : ''}`}
+              />
+              <span className={t.done ? 'line-through text-slate-400' : ''}>{t.title}</span>
+              <span className="ml-auto shrink-0 text-xs text-slate-500">{t.date} · {t.duration_min}m</span>
+            </div>
+            {!t.done && (
+              <button
+                onClick={() => setActiveTimer(activeTimer === i ? null : i)}
+                className="btn-lively mt-1 w-full rounded-xl border border-indigo-200 bg-white py-2 text-sm font-semibold text-indigo-600"
+              >
+                {activeTimer === i ? 'Hide timer' : 'Start focus session'}
+              </button>
+            )}
+            {activeTimer === i && !t.done && (
+              <div className="anim-fade-up mt-2">
+                <SessionTimer
+                  key={`${t.id}-${t.blocks_done || 0}`}
+                  task={t}
+                  startBlock={t.blocks_done || 0}
+                  onBlockDone={(b) => markBlock(i, b)}
+                  onTaskDone={() => {
+                    finishFromTimer(i)
+                    setActiveTimer(null)
+                  }}
+                  onClose={() => setActiveTimer(null)}
+                />
+              </div>
+            )}
           </li>
         ))}
       </ul>
