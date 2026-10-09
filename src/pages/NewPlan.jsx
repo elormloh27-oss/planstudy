@@ -40,7 +40,12 @@ export default function NewPlan() {
       )
       if (!parsed || parsed.topics.length === 0) {
         setParsing('')
-        setOutlineNote(MESSAGES.failed)
+        const local = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+        setOutlineNote(
+          local
+            ? 'Outline was read, but AI extraction only runs on the live site. Push to GitHub and try there, or type topics by hand.'
+            : MESSAGES.failed
+        )
         return
       }
       if (parsed.subject) setSubject(parsed.subject)

@@ -68,7 +68,28 @@ export default async function handler(req, res) {
       if (!r.ok) throw new Error('gemini ' + r.status)
       const data = await r.json()
       const outText = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-      const parsed = extractJson(outText)
+      // Object first: a greedy array match would swallow just the topics list.
+      let parsed = null
+      try {
+        const m = outText.match(/\{[\s\S]*\}/)
+        const obj = m ? JSON.parse(m[0]) : null
+        if (obj && typeof obj === 'object' && !Array.isArray(obj)) parsed = obj
+      } catch {
+        parsed = null
+      }
+      if (!parsed) {
+        // Model returned a bare array of topic strings instead.
+        try {
+          const m2 = outText.match(/\[[\s\S]*\]/)
+          const arr = m2 ? JSON.parse(m2[0]) : null
+          if (Array.isArray(arr)) {
+            parsed = { subject: '', topics: arr.map(String), deadline: '', hours: null }
+          }
+        } catch {
+          parsed = null
+        }
+      }
+      if (!parsed) throw new Error('no json')
       const topics = (Array.isArray(parsed.topics) ? parsed.topics : [])
         .map((t) => String(t).trim())
         .filter(Boolean)
