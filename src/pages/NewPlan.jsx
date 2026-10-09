@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
-import { generatePlan } from '../lib/generatePlan.js'
+import { generatePlan, parseOutline } from '../lib/generatePlan.js'
+import { readOutline } from '../lib/pdfOutline.js'
 
 const input = 'w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100'
 
@@ -13,7 +14,50 @@ export default function NewPlan() {
   const [preview, setPreview] = useState(null)
   const [source, setSource] = useState('')
   const [busy, setBusy] = useState(false)
+  const [parsing, setParsing] = useState('')
+  const [outlineNote, setOutlineNote] = useState('')
+  const fileRef = useRef(null)
   const navigate = useNavigate()
+
+  const MESSAGES = {
+    'not-pdf': 'That is not a PDF. The outline must be a PDF file.',
+    'too-big': 'File is over 25MB. Re-save with fewer pages and try again.',
+    locked: 'This PDF is locked. Unlock it first, or type the topics by hand.',
+    empty: 'No readable pages found. Type the topics by hand.',
+    cdn: 'Reader could not load. Check connection and try again.',
+    failed: 'Could not read the outline. Type the topics by hand.'
+  }
+
+  async function onFile(file) {
+    if (!file || parsing || busy) return
+    setOutlineNote('')
+    setParsing('Reading outline...')
+    try {
+      const out = await readOutline(file)
+      setParsing(out.mode === 'images' ? 'Reading scanned pages...' : 'Extracting topics...')
+      const parsed = await parseOutline(
+        out.mode === 'text' ? { text: out.text } : { images: out.images }
+      )
+      if (!parsed || parsed.topics.length === 0) {
+        setParsing('')
+        setOutlineNote(MESSAGES.failed)
+        return
+      }
+      if (parsed.subject) setSubject(parsed.subject)
+      setTopics(parsed.topics.join('\n'))
+      if (parsed.deadline) setDeadline(parsed.deadline)
+      if (parsed.hours) setHours(parsed.hours)
+      setParsing('')
+      const pages = out.mode === 'text'
+        ? `First ${out.pagesUsed} of ${out.totalPages} pages read.`
+        : `Scanned file, ${out.images.length} pages read as images.`
+      setOutlineNote(`Filled from ${file.name}. ${pages} Check and edit before generating.`)
+    } catch (e) {
+      setParsing('')
+      setOutlineNote(MESSAGES[e?.code] || MESSAGES.failed)
+    }
+    if (fileRef.current) fileRef.current.value = ''
+  }
 
   async function onGenerate(e) {
     e.preventDefault()
@@ -47,6 +91,33 @@ export default function NewPlan() {
     <main className="mx-auto w-full max-w-xl px-4 py-6 sm:py-8">
       <p className="text-sm font-medium text-indigo-600">Step 1 of 2</p>
       <h1 className="mt-1 text-2xl font-bold">What are you studying?</h1>
+
+      <div
+        onClick={() => !parsing && !busy && fileRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault()
+          onFile(e.dataTransfer.files?.[0])
+        }}
+        className="mt-5 cursor-pointer rounded-2xl border-2 border-dashed border-indigo-200 bg-indigo-50/50 p-5 text-center"
+      >
+        <p className="font-semibold text-indigo-700">
+          {parsing || 'Drop a course outline PDF here'}
+        </p>
+        {!parsing && (
+          <p className="mt-1 text-sm text-slate-500">
+            or tap to browse — the form fills itself in
+          </p>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/pdf"
+          className="hidden"
+          onChange={(e) => onFile(e.target.files?.[0])}
+        />
+      </div>
+      {outlineNote && <p className="mt-2 text-sm text-slate-600">{outlineNote}</p>}
 
       <form onSubmit={onGenerate} className="mt-5 rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
         <label className="block text-sm font-medium">Subject</label>
@@ -94,7 +165,7 @@ export default function NewPlan() {
         </div>
 
         <button
-          disabled={busy}
+          disabled={busy || parsing}
           className="mt-5 w-full rounded-xl bg-indigo-600 py-3.5 font-semibold text-white active:bg-indigo-700 disabled:opacity-50"
         >
           {busy ? 'Building your plan...' : 'Generate plan'}

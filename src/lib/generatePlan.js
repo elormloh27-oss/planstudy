@@ -18,7 +18,23 @@ export async function generatePlan(input) {
   }
 }
 
-// Forces part minutes to sum exactly to the task total, whatever the AI returns.
+// Sends outline text or page images for header extraction. No offline fallback:
+// without AI there is nothing to extract from, so failures return null.
+export async function parseOutline(input) {
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'parse', ...input })
+    })
+    if (!res.ok) throw new Error('proxy failed')
+    const data = await res.json()
+    if (data.parsed && Array.isArray(data.parsed.topics)) return data.parsed
+    throw new Error('bad ai shape')
+  } catch {
+    return null
+  }
+}
 function normalizeParts(parts, total) {
   const clean = (Array.isArray(parts) ? parts : [])
     .map((p, i) => ({
