@@ -1,13 +1,20 @@
 // Reads course-outline PDFs entirely in the browser.
-// Text layer via pdf.js (lazy CDN, pinned version). Scanned pages become
-// small JPEGs for Gemini vision. The PDF file itself never leaves the device.
+// Whole-file text pass (no rendering), then a zero-token sieve that keeps
+// heading-like lines only. The PDF file itself never leaves the device.
 const PDFJS_VERSION = '3.11.174'
 const PDFJS_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.min.js`
 const WORKER_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.js`
 
-export const MAX_FILE_BYTES = 25 * 1024 * 1024
-export const MAX_PAGES = 30
+export const PHONE_CAP = { bytes: 15 * 1024 * 1024, pages: 100 }
+export const LAPTOP_CAP = { bytes: 50 * 1024 * 1024, pages: 300 }
 export const MAX_TEXT = 15000
+
+export function deviceCap() {
+  const coarse =
+    (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches) ||
+    (typeof screen !== 'undefined' && Math.min(screen.width, screen.height) < 768)
+  return coarse ? { ...PHONE_CAP, label: 'phone' } : { ...LAPTOP_CAP, label: 'laptop' }
+}
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -38,12 +45,71 @@ async function isPdf(file) {
   return String.fromCharCode(...head) === '%PDF-'
 }
 
+const HEAD_PATTERN = /^(week|chapter|topic|unit|module|part|section|lesson)\b/i
+const NUM_PATTERN = /^\d{1,2}([.\)]\s|:)/
+
+function groupLines(items) {
+  const rows = new Map()
+  for (const it of items) {
+    if (!it.str || !it.str.trim()) continue
+    const y = Math.round(it.transform[5])
+    const size = Math.abs(it.transform[3]) || 0
+    const bold = /bold|black|demi|heavy/i.test(it.fontName || '')
+    if (!rows.has(y)) rows.set(y, { text: '', size: 0, bold: false })
+    const row = rows.get(y)
+    row.text += it.str
+    row.size = Math.max(row.size, size)
+    row.bold = row.bold || bold
+  }
+  return [...rows.values()]
+    .map((r) => ({ ...r, text: r.text.replace(/\s+/g, ' ').trim() }))
+    .filter((r) => r.text.length > 0)
+}
+
+// Zero-token sieve: body size by most common size, keep heading-like lines.
+function sieve(allLines) {
+  const freq = {}
+  for (const l of allLines) {
+    const k = Math.round(l.size) || 0
+    freq[k] = (freq[k] || 0) + l.text.length
+  }
+  let body = 0
+  let best = -1
+  for (const k of Object.keys(freq)) {
+    if (freq[k] > best) {
+      best = freq[k]
+      body = Number(k)
+    }
+  }
+  const seen = new Set()
+  const out = []
+  for (const l of allLines) {
+    const t = l.text
+    if (t.length < 3 || t.length > 200 || seen.has(t.toLowerCase())) continue
+    const caps = t.length > 3 && /[A-Z]/.test(t) && t === t.toUpperCase()
+    const head =
+      (body > 0 && l.size >= body * 1.15) ||
+      l.bold ||
+      caps ||
+      HEAD_PATTERN.test(t) ||
+      NUM_PATTERN.test(t)
+    if (head) {
+      seen.add(t.toLowerCase())
+      out.push(t)
+      if (out.length >= 200) break
+    }
+  }
+  return out
+}
+
 // Returns { mode: 'text', text, pagesUsed, totalPages }
-// or { mode: 'images', images: [dataUrl...], totalPages }
-// or throws { code } where code is 'not-pdf' | 'too-big' | 'locked' | 'empty' | 'cdn'
-export async function readOutline(file) {
+// or { mode: 'images', images, totalPages }
+// or throws { code, ... }.
+// opts: { onProgress(page, total), cancelled: { current: false } }
+export async function readOutline(file, opts = {}) {
+  const cap = deviceCap()
   if (!(await isPdf(file))) throw { code: 'not-pdf' }
-  if (file.size > MAX_FILE_BYTES) throw { code: 'too-big' }
+  if (file.size > cap.bytes) throw { code: 'too-big', cap }
 
   let lib
   try {
@@ -63,37 +129,53 @@ export async function readOutline(file) {
     throw { code: 'empty' }
   }
 
-  const totalPages = pdf.numPages
-  const usePages = Math.min(totalPages, MAX_PAGES)
-  const texts = []
-  const scanned = []
-  for (let p = 1; p <= usePages; p++) {
-    const page = await pdf.getPage(p)
-    const content = await page.getTextContent()
-    const str = content.items.map((it) => it.str).join(' ').replace(/\s+/g, ' ').trim()
-    texts.push(str)
-    if (str.length < 30) scanned.push({ page, num: p })
-    if (typeof page.cleanup === 'function') page.cleanup()
-  }
+  try {
+    const totalPages = pdf.numPages
+    const limit = Math.min(totalPages, cap.pages)
+    const allLines = []
+    let header = []
+    let pagesRead = 0
+    for (let p = 1; p <= limit; p++) {
+      if (opts.cancelled?.current) throw { code: 'cancelled' }
+      const page = await pdf.getPage(p)
+      const content = await page.getTextContent()
+      const lines = groupLines(content.items)
+      if (p === 1) header = lines.slice(0, 8).map((l) => l.text)
+      allLines.push(...lines)
+      if (typeof page.cleanup === 'function') page.cleanup()
+      pagesRead = p
+      opts.onProgress?.(p, totalPages)
+    }
 
-  const text = texts.join('\n').slice(0, MAX_TEXT)
-  if (text.replace(/\s/g, '').length >= 500) {
-    return { mode: 'text', text, pagesUsed: usePages, totalPages }
-  }
+    const headings = sieve(allLines)
+    if (headings.length >= 3) {
+      const text = `HEADER:\n${header.join('\n')}\nHEADINGS:\n${headings.map((h) => `- ${h}`).join('\n')}`.slice(0, MAX_TEXT)
+      return { mode: 'text', text, pagesUsed: pagesRead, totalPages }
+    }
 
-  // Scanned: render up to 3 empty pages as compressed images.
-  const images = []
-  for (const { page } of scanned.slice(0, 3)) {
-    const viewport = page.getViewport({ scale: 1 })
-    const scale = Math.min(1.5, 768 / viewport.width)
-    const v = page.getViewport({ scale })
-    const canvas = document.createElement('canvas')
-    canvas.width = Math.floor(v.width)
-    canvas.height = Math.floor(v.height)
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport: v }).promise
-    images.push(canvas.toDataURL('image/jpeg', 0.7))
-    if (typeof page.cleanup === 'function') page.cleanup()
+    // Likely scanned: render up to 3 pages as compressed images.
+    const images = []
+    for (let p = 1; p <= Math.min(totalPages, 3); p++) {
+      if (opts.cancelled?.current) throw { code: 'cancelled' }
+      const page = await pdf.getPage(p)
+      const viewport = page.getViewport({ scale: 1 })
+      const scale = Math.min(1.5, 768 / viewport.width)
+      const v = page.getViewport({ scale })
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.floor(v.width)
+      canvas.height = Math.floor(v.height)
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport: v }).promise
+      images.push(canvas.toDataURL('image/jpeg', 0.7))
+      canvas.width = 0
+      if (typeof page.cleanup === 'function') page.cleanup()
+    }
+    if (images.length === 0) throw { code: 'empty' }
+    return { mode: 'images', images, totalPages }
+  } finally {
+    try {
+      await pdf.destroy()
+    } catch {
+      /* already gone */
+    }
   }
-  if (images.length === 0) throw { code: 'empty' }
-  return { mode: 'images', images, totalPages }
 }

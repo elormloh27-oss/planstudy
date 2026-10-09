@@ -17,23 +17,28 @@ export default function NewPlan() {
   const [parsing, setParsing] = useState('')
   const [outlineNote, setOutlineNote] = useState('')
   const fileRef = useRef(null)
+  const cancelRef = useRef({ current: false })
   const navigate = useNavigate()
 
   const MESSAGES = {
     'not-pdf': 'That is not a PDF. The outline must be a PDF file.',
-    'too-big': 'File is over 25MB. Re-save with fewer pages and try again.',
     locked: 'This PDF is locked. Unlock it first, or type the topics by hand.',
     empty: 'No readable pages found. Type the topics by hand.',
     cdn: 'Reader could not load. Check connection and try again.',
+    cancelled: 'Cancelled. Type the topics by hand or try a smaller file.',
     failed: 'Could not read the outline. Type the topics by hand.'
   }
 
   async function onFile(file) {
     if (!file || parsing || busy) return
     setOutlineNote('')
+    cancelRef.current = false
     setParsing('Reading outline...')
     try {
-      const out = await readOutline(file)
+      const out = await readOutline(file, {
+        cancelled: cancelRef,
+        onProgress: (p, total) => setParsing(`Reading page ${p} of ${total}...`)
+      })
       setParsing(out.mode === 'images' ? 'Reading scanned pages...' : 'Extracting topics...')
       const parsed = await parseOutline(
         out.mode === 'text' ? { text: out.text } : { images: out.images }
@@ -54,12 +59,19 @@ export default function NewPlan() {
       if (parsed.hours) setHours(parsed.hours)
       setParsing('')
       const pages = out.mode === 'text'
-        ? `First ${out.pagesUsed} of ${out.totalPages} pages read.`
+        ? (out.pagesUsed >= out.totalPages
+          ? `Whole file read (${out.totalPages} pages, headings only).`
+          : `First ${out.pagesUsed} of ${out.totalPages} pages read (enough text gathered).`)
         : `Scanned file, ${out.images.length} pages read as images.`
       setOutlineNote(`Filled from ${file.name}. ${pages} Check and edit before generating.`)
     } catch (e) {
       setParsing('')
-      setOutlineNote(MESSAGES[e?.code] || MESSAGES.failed)
+      if (e?.code === 'too-big' && e.cap) {
+        const mb = Math.round(e.cap.bytes / 1048576)
+        setOutlineNote(`Over the ${mb}MB limit on this ${e.cap.label}. Re-save with fewer pages and try again.`)
+      } else {
+        setOutlineNote(MESSAGES[e?.code] || MESSAGES.failed)
+      }
     }
     if (fileRef.current) fileRef.current.value = ''
   }
@@ -109,7 +121,18 @@ export default function NewPlan() {
         <p className="font-semibold text-indigo-700">
           {parsing || 'Drop a course outline PDF here'}
         </p>
-        {!parsing && (
+        {parsing ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              cancelRef.current = true
+            }}
+            className="mt-2 rounded-lg border px-3 py-1 text-sm font-medium text-slate-600"
+          >
+            Cancel
+          </button>
+        ) : (
           <p className="mt-1 text-sm text-slate-500">
             or tap to browse — the form fills itself in
           </p>
