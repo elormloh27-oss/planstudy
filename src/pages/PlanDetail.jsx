@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { ChevronDown, PartyPopper } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient.js'
 import ProgressBar from '../components/ProgressBar.jsx'
 import Loading from '../components/Loading.jsx'
@@ -11,6 +12,7 @@ export default function PlanDetail() {
   const [plan, setPlan] = useState(null)
   const [activeTimer, setActiveTimer] = useState(null)
   const [breaking, setBreaking] = useState(null)
+  const [openBd, setOpenBd] = useState({})
 
   useEffect(() => {
     supabase
@@ -56,6 +58,7 @@ export default function PlanDetail() {
       i === index ? { ...x, breakdown: res.parts, breakdownSource: res.source } : x
     )
     setBreaking(null)
+    setOpenBd((o) => ({ ...o, [index]: true }))
     await saveTasks(tasks)
   }
 
@@ -82,7 +85,9 @@ export default function PlanDetail() {
               style={{ left: `${8 + i * 18}%`, background: c, animationDelay: `${i * 0.15}s` }}
             />
           ))}
-          <p className="anim-wiggle inline-block text-3xl">🎉</p>
+          <p className="anim-wiggle inline-flex rounded-full bg-white/20 p-3">
+            <PartyPopper size={28} />
+          </p>
           <p className="mt-1 text-lg font-bold">Plan complete. Exam ready.</p>
         </div>
       )}
@@ -94,7 +99,7 @@ export default function PlanDetail() {
       <ul className="mt-6 space-y-2">
         {tasks.map((t, i) => (
           <li key={t.id || i}>
-            <div className="anim-fade-up flex items-center gap-3 rounded border bg-white px-4 py-3" style={{ animationDelay: `${Math.min(i, 8) * 0.04}s` }}>
+            <div className="flex items-center gap-3 rounded border bg-white px-4 py-3">
               <input
                 key={String(Boolean(t.done))}
                 type="checkbox"
@@ -123,12 +128,21 @@ export default function PlanDetail() {
               </button>
             )}
             {t.breakdown && (
-              <div className="anim-fade-up mt-2 rounded-xl bg-slate-50 p-3">
-                <p className="text-xs font-medium text-slate-500">
+              <div className="mt-2 rounded-xl bg-slate-50 p-3">
+                <button
+                  onClick={() => setOpenBd((o) => ({ ...o, [i]: !o[i] }))}
+                  className="flex w-full items-center gap-1 text-left text-xs font-medium text-slate-500"
+                >
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform ${openBd[i] ? '' : '-rotate-90'}`}
+                  />
                   Focus order · {t.breakdown.reduce((a, p) => a + p.minutes, 0)} min total
                   {t.breakdownSource === 'offline' ? ' · offline' : ''}
-                </p>
-                <ul className="mt-2 space-y-1.5">
+                </button>
+                <div className={`expand ${openBd[i] ? 'open' : ''}`}>
+                <div>
+                <ul className="space-y-1.5 pt-2">
                   {t.breakdown.map((p) => (
                     <li key={p.id} className="flex items-center gap-2 text-sm">
                       <span
@@ -147,6 +161,8 @@ export default function PlanDetail() {
                     </li>
                   ))}
                 </ul>
+                </div>
+                </div>
               </div>
             )}
             {activeTimer === i && !t.done && (

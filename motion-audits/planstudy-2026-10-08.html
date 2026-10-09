@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>planstudy motion audit — 2026-10-08</title>
+<style>
+:root{
+  --ink:#101014; --paper:#f4f4f6; --paper-dim:#6b6b76; --line:#26262e;
+  --surface:#17171d; --surface-2:#1e1e26;
+  --crit:oklch(0.655 0.185 25); --imp:oklch(0.805 0.125 78); --opp:oklch(0.745 0.135 152);
+  --t-good:oklch(0.745 0.135 152); --t-mid:oklch(0.805 0.125 78); --t-slow:oklch(0.655 0.185 25);
+  --sans:system-ui,-apple-system,"Segoe UI",sans-serif; --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+:root:has(#theme-light:checked){
+  --ink:#f4f4f6; --paper:#17171d; --paper-dim:#55555f; --line:#e2e2e8;
+  --surface:#ffffff; --surface-2:#f1f1f5;
+  --crit:oklch(0.55 0.19 25); --imp:oklch(0.68 0.13 78); --opp:oklch(0.6 0.14 152);
+  --t-good:oklch(0.6 0.14 152); --t-mid:oklch(0.68 0.13 78); --t-slow:oklch(0.55 0.19 25);
+}
+*{box-sizing:border-box}
+body{background:var(--ink);color:var(--paper);font-family:var(--sans);margin:0;line-height:1.6}
+.wrap{max-width:1020px;margin:0 auto;padding:32px 20px 80px}
+.theme-switch{text-align:right;margin-bottom:8px}
+.theme-switch label{border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:12px;cursor:pointer}
+.vh{position:absolute;opacity:0;pointer-events:none}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--paper-dim)}
+h1.title{font-size:clamp(28px,5vw,46px);line-height:1.05;margin:8px 0;letter-spacing:-.02em}
+.lede{color:var(--paper-dim);max-width:60ch}
+.meta-row,.stats{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-family:var(--mono);font-size:12px}
+.stats a{color:var(--paper);text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:4px 10px}
+section{margin-top:44px}
+.mono-label{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--paper-dim)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:hover td{border-color:var(--paper-dim);transition:border-color .2s ease}
+.chip{display:inline-block;border-radius:999px;padding:2px 10px;font-size:11px;font-family:var(--mono);border:1px solid var(--line)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.finding-row{display:grid;grid-template-columns:1fr 380px;gap:20px;border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:16px}
+@media(max-width:860px){.finding-row{grid-template-columns:1fr}}
+.finding-row[data-sev="crit"]{border-color:var(--crit)}
+.finding-row[data-sev="imp"]{border-color:var(--imp)}
+.label{font-family:var(--mono);font-size:11px;color:var(--paper-dim);display:block}
+.find-loc code{font-family:var(--mono);font-size:12px;color:var(--paper-dim)}
+.demo__bar{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:11px;margin-bottom:8px}
+.demo__stage{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;min-height:150px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.demo__loop{color:var(--paper-dim)}
+.ui-btn{background:var(--paper);color:var(--ink);border-radius:999px;padding:10px 22px;font-weight:600;font-size:14px}
+.ui-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 18px;width:220px}
+.ui-row{height:12px;border-radius:6px;background:var(--paper-dim);opacity:.5;margin-top:8px}
+.ui-panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;width:240px;overflow:hidden}
+.ui-check{width:22px;height:22px;border-radius:7px;background:var(--paper)}
+.timing-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:860px){.timing-grid{grid-template-columns:1fr}}
+.keylist{font-family:var(--mono);font-size:12px}
+.keylist li{margin-bottom:6px;list-style:none}
+.lens-list{list-style:none;padding:0}
+.lens-list li{margin-bottom:8px}
+footer{margin-top:60px;font-family:var(--mono);font-size:11px;color:var(--paper-dim)}
+@keyframes m1{0%{opacity:0;transform:translateY(10px)}60%,100%{opacity:1;transform:translateY(0)}}
+.demo-1__mt{animation:m1 3s cubic-bezier(0.32,0.72,0,1) infinite}
+@keyframes m2{0%{transform:scaleY(0);opacity:0;transform-origin:top}60%,100%{transform:scaleY(1);opacity:1;transform-origin:top}}
+.demo-2__mt{animation:m2 3s cubic-bezier(0.32,0.72,0,1) infinite}
+@keyframes m3{0%{transform:scale(.9);opacity:0}60%,100%{transform:scale(1);opacity:1}}
+.demo-3__mt{animation:m3 3s cubic-bezier(0.32,0.72,0,1) infinite}
+@keyframes m4{0%{opacity:0;transform:translateY(14px)}60%,100%{opacity:1;transform:translateY(0)}}
+.demo-4__mt{animation:m4 3s cubic-bezier(0.32,0.72,0,1) infinite}
+@media (prefers-reduced-motion: reduce){
+  [class*="__mt"]{animation:none !important}
+  .demo__loop{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="theme-switch">
+    <input class="vh" type="radio" name="theme" id="theme-dark" checked>
+    <input class="vh" type="radio" name="theme" id="theme-light">
+    <label for="theme-dark">Dark</label> <label for="theme-light">Light</label>
+  </div>
+  <p class="eyebrow">MOTION AUDIT · DESIGN-MOTION-PRINCIPLES</p>
+  <h1 class="title">planstudy — daily-use calm, landing keeps the delight</h1>
+  <p class="lede">Student AI study planner (React + Tailwind, CSS-only motion). Used daily: timers, checkboxes, task lists. Weighted Jakub primary, Emil secondary, Jhey selective.</p>
+  <div class="meta-row"><span>Vite SPA</span><span>CSS keyframes + transitions</span><span>2026-10-08</span></div>
+  <div class="stats">
+    <a href="#rec-crit">Critical: 3</a><a href="#rec-imp">Important: 4</a><a href="#rec-opp">Opportunities: 3</a>
+  </div>
+
+  <section class="assessment">
+    <p class="mono-label">OVERALL</p>
+    <p>The product UI moves too much for a daily tool and too little where it counts: panels vanish instantly while task rows replay staggered entrances on every visit. Accessibility coverage is half done. The landing earns its motion; the dashboard and plan pages should go quiet, fast, and interruptible.</p>
+  </section>
+
+  <section>
+    <p class="mono-label">01 · LENS SUMMARY</p>
+    <table>
+      <tr><th>Lens</th><th>Verdict</th><th>Read</th></tr>
+      <tr><td>Jakub Krehel (Primary)</td><td><span class="dot" style="background:var(--imp)"></span>Concern</td><td>Polish exists but uneven: spring CTAs good, 800ms blur reveals and infinite logo bounce too loud.</td></tr>
+      <tr><td>Emil Kowalski (Secondary)</td><td><span class="dot" style="background:var(--crit)"></span>Problem</td><td>Daily actions animate past 300ms; keyframe checkbox cannot be interrupted; stagger on utility lists.</td></tr>
+      <tr><td>Jhey Tompkins (Selective)</td><td><span class="dot" style="background:var(--t-good)"></span>Strong</td><td>Celebration and landing moments earn their playfulness; keep contained there.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <p class="mono-label">03 · JAKUB KREHEL — PRODUCTION POLISH (PRIMARY)</p>
+    <p><span class="dot" style="background:var(--imp)"></span>Concern</p>
+    <ul class="lens-list good">
+      <li>✓ Spring CTA buttons with inner-icon physics — <code>Navbar.jsx</code></li>
+      <li>✓ Press feedback active:scale on buttons — <code>index.css .btn-lively</code></li>
+      <li>✓ Hover transitions on interactive elements — <code>Navbar.jsx</code></li>
+    </ul>
+    <div class="finding-row" data-sev="imp">
+      <div><span class="chip">Important · Jakub</span><h4>800ms blur reveal on every landing block</h4>
+      <p><span class="label">What</span>All landing sections share one 800ms opacity+translate+blur enter.</p>
+      <p><span class="label">Why it matters</span>Uniform entrances read as template motion; 800ms delays reading.</p>
+      <p><span class="label">Recommended motion</span>Hero keeps 600ms blur enter; blocks below use 350ms fade-rise, no blur.</p>
+      <p class="find-loc"><code>index.css:80 · Landing.jsx</code></p></div>
+      <div class="demo"><div class="demo__bar"><span>350ms fade-rise, no blur</span><span class="demo__loop">↻</span></div>
+      <div class="demo__stage"><div class="demo-4__mt ui-card"><div class="ui-row"></div><div class="ui-row"></div></div></div></div>
+    </div>
+    <div class="finding-row" data-sev="imp">
+      <div><span class="chip">Important · Jakub</span><h4>Infinite logo bounce with no pause</h4>
+      <p><span class="label">What</span>Landing logo floats forever on a 1.2s loop.</p>
+      <p><span class="label">Why it matters</span>Unpausable loops distract and can nauseate; nothing is communicated after the first float.</p>
+      <p><span class="label">Recommended motion</span>One gentle settle on load, then still.</p>
+      <p class="find-loc"><code>index.css:31 · Landing.jsx</code></p></div>
+      <div class="demo"><div class="demo__bar"><span>Settle once, then still</span><span class="demo__loop">↻</span></div>
+      <div class="demo__stage"><div class="demo-3__mt ui-check"></div></div></div>
+    </div>
+    <p>Through Jakub's lens: good bones, uneven volume — quiet the loops, differentiate the enters.</p>
+  </section>
+
+  <section>
+    <p class="mono-label">04 · EMIL KOWALSKI — RESTRAINT &amp; SPEED (SECONDARY)</p>
+    <p><span class="dot" style="background:var(--crit)"></span>Problem</p>
+    <div class="finding-row" data-sev="crit">
+      <div><span class="chip">Critical · Emil</span><h4>Panels vanish with no exit</h4>
+      <p><span class="label">What</span>Mobile menu, breakdown expand, timer and preview panels unmount instantly.</p>
+      <p><span class="label">Why it matters</span>Instant disappearance breaks spatial continuity; exits must exist and stay subtler than enters.</p>
+      <p><span class="label">Recommended motion</span>150–200ms fade-rise exit; grid-rows collapse for expanders.</p>
+      <p class="find-loc"><code>Navbar.jsx · PlanDetail.jsx · NewPlan.jsx</code></p></div>
+      <div class="demo"><div class="demo__bar"><span>180ms fade exit</span><span class="demo__loop">↻</span></div>
+      <div class="demo__stage"><div class="demo-1__mt ui-btn">Menu</div></div></div>
+    </div>
+    <div class="finding-row" data-sev="crit">
+      <div><span class="chip">Critical · Emil</span><h4>Stagger replayed on utility task lists</h4>
+      <p><span class="label">What</span>Every task row replays a delayed fade on each visit.</p>
+      <p><span class="label">Why it matters</span>High-frequency lists must be instant; stagger is a once-per-moment device.</p>
+      <p><span class="label">Recommended motion</span>No stagger on task rows; keep one soft mount fade on dashboard cards.</p>
+      <p class="find-loc"><code>PlanDetail.jsx:102</code></p></div>
+      <div class="demo"><div class="demo__bar"><span>Instant rows, calm cards</span><span class="demo__loop">↻</span></div>
+      <div class="demo__stage"><div class="demo-2__mt ui-panel"><div class="ui-row"></div><div class="ui-row"></div></div></div></div>
+    </div>
+    <div class="finding-row" data-sev="crit">
+      <div><span class="chip">Critical · Emil + a11y</span><h4>Reduced-motion guard is half built</h4>
+      <p><span class="label">What</span>Keyframes stop under reduce, but transitions, hamburger morph, progress sweep and the spinning loader keep moving.</p>
+      <p><span class="label">Why it matters</span>Spinners are vestibular triggers; partial guards are broken promises.</p>
+      <p><span class="label">Recommended motion</span>Kill transitions and spin under reduce; loader becomes a static ring.</p>
+      <p class="find-loc"><code>index.css:99 · Loading.jsx</code></p></div>
+    </div>
+    <p>Through Emil's lens: decide what deserves to move — daily surfaces go quiet and instant where it counts.</p>
+  </section>
+
+  <section>
+    <p class="mono-label">05 · JHEY TOMPKINS — EXPERIMENTATION &amp; DELIGHT (SELECTIVE)</p>
+    <p><span class="dot" style="background:var(--t-good)"></span>Strong</p>
+    <ul class="lens-list good">
+      <li>✓ 100 percent confetti celebration — rare moment, earns the noise</li>
+      <li>✓ Landing split hero with product preview — motion serves the story</li>
+    </ul>
+    <p>Through Jhey's lens: delight is correctly quarantined to rare moments; keep it there.</p>
+  </section>
+
+  <section id="rec-crit">
+    <p class="mono-label">06 · CRITICAL · MUST FIX</p>
+    <table><tr><th></th><th>Issue</th><th>File</th><th>Fix</th></tr>
+    <tr><td>🔴</td><td>No exit animations</td><td><code>Navbar / PlanDetail / NewPlan</code></td><td>150–200ms fade exits; grid-rows collapse</td></tr>
+    <tr><td>🔴</td><td>Stagger on utility lists</td><td><code>PlanDetail.jsx:102</code></td><td>Remove; instant rows</td></tr>
+    <tr><td>🔴</td><td>Half reduced-motion guard</td><td><code>index.css:99</code></td><td>Cover transitions + spinner</td></tr></table>
+  </section>
+  <section id="rec-imp">
+    <p class="mono-label">IMPORTANT · SHOULD FIX</p>
+    <table><tr><th></th><th>Issue</th><th>File</th><th>Fix</th></tr>
+    <tr><td>🟡</td><td>800ms blur on all landing blocks</td><td><code>index.css:80</code></td><td>Hero 600ms; rest 350ms no blur</td></tr>
+    <tr><td>🟡</td><td>Infinite logo bounce</td><td><code>Landing.jsx</code></td><td>Settle once, then still</td></tr>
+    <tr><td>🟡</td><td>Default ease on keyframes</td><td><code>index.css:36-38</code></td><td>Spring bezier everywhere</td></tr>
+    <tr><td>🟡</td><td>Keyframe checkbox pop</td><td><code>PlanDetail.jsx:108</code></td><td>Transition scale, interruptible</td></tr></table>
+  </section>
+  <section id="rec-opp">
+    <p class="mono-label">OPPORTUNITIES · COULD ENHANCE</p>
+    <table><tr><th></th><th>Enhancement</th><th>Where</th><th>Impact</th></tr>
+    <tr><td>🟢</td><td>Timer ring keep linear</td><td><code>SessionTimer.jsx</code></td><td>Clock accuracy beats easing</td></tr>
+    <tr><td>🟢</td><td>Chevron already transitions</td><td><code>PlanDetail.jsx:138</code></td><td>Keep as reference pattern</td></tr>
+    <tr><td>🟢</td><td>Loading → content crossfade</td><td><code>Dashboard / PlanDetail</code></td><td>Softer first paint</td></tr></table>
+  </section>
+
+  <section>
+    <p class="mono-label">07 · LENS REFERENCE</p>
+    <p>Lens referenced most: Jakub — production calm for a daily tool. To follow Emil more strictly: cut all list staggers and cap UI motion at 300ms. To follow Jhey more: confine new playfulness to the celebration and landing hero.</p>
+  </section>
+  <footer>planstudy · 3 critical · 4 important · 3 opportunities · 2026-10-08</footer>
+</div>
+</body>
+</html>

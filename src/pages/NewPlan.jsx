@@ -201,7 +201,7 @@ export default function NewPlan() {
       </form>
 
       {preview && (
-        <div className="mt-5 rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+        <div className="anim-fade-up mt-5 rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
           <div className="flex items-center justify-between">
             <p className="font-semibold">{preview.length} study sessions</p>
             <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">
